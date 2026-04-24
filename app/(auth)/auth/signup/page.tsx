@@ -37,13 +37,8 @@ export default function SignupPage() {
         toast.error(typeof data.error === "string" ? data.error : "Signup failed");
         return;
       }
-      if (typeof data.devOtp === "string") {
-        try {
-          sessionStorage.setItem("dcrm_dev_otp", data.devOtp);
-        } catch {
-          /* private mode */
-        }
-        toast.success(`Email not configured — your code is ${data.devOtp}`);
+      if (data.emailMocked) {
+        toast.success("SMTP mock: verification code is in the server terminal.");
       } else {
         toast.success("Check your email for the verification code (and spam/junk).");
       }

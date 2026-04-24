@@ -6,7 +6,6 @@ function shouldMockSmtp(): boolean {
   if (process.env.SMTP_MOCK === "1" || process.env.SMTP_MOCK === "true") return true;
   const host = (process.env.SMTP_HOST ?? "").trim();
   if (PLACEHOLDER_HOSTS.has(host)) return true;
-  if (process.env.NODE_ENV === "development" && !host) return true;
   return false;
 }
 

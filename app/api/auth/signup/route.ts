@@ -65,7 +65,6 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: true,
         emailMocked: mocked,
-        ...(mocked ? { devOtp: code } : {}),
       });
     } catch (e) {
       console.error(e);

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
+import type { TeamMemberRoster } from "@/lib/auth/team";
 
 const items = [
   { href: "/dashboard", label: "Dashboard" },
@@ -14,7 +15,7 @@ const items = [
   { href: "/settings", label: "Settings" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMemberRoster[] }) {
   const pathname = usePathname();
 
   return (
@@ -24,7 +25,7 @@ export function Sidebar() {
           DCRM
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Main">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Main">
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
@@ -42,6 +43,32 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {teamMembers.length > 0 ? (
+          <div className="mt-4 border-t border-[var(--color-border-subtle)] pt-4">
+            <p className="mb-2 px-4 text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+              Team
+            </p>
+            <ul className="space-y-1">
+              {teamMembers.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex items-center gap-2 rounded-[10px] px-4 py-2 text-sm text-[var(--color-text-secondary)]"
+                >
+                  <span
+                    className={cn(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      m.active ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-white/20",
+                    )}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-white/90" title={m.email ?? m.displayName}>
+                    {m.displayName}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </nav>
       <div className="border-t border-[var(--color-border-subtle)] p-3">
         <form action={logoutAction}>

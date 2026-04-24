@@ -18,6 +18,14 @@ export async function createClientAction(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+  console.log("[createClientAction]", {
+    client_name: input.client_name,
+    email: input.email,
+    contact_number: input.contact_number,
+    country: input.country,
+    work_type: input.work_type,
+    admin_name: input.admin_name,
+  });
   try {
     await clientService.create(supabase, {
       client_name: input.client_name,

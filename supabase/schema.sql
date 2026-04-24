@@ -68,6 +68,9 @@ create policy "profile_update_own" on public.users_profile
 create policy "profile_insert_own" on public.users_profile
   for insert with check (auth.uid() = id);
 
+create policy "profile_select_all_authenticated" on public.users_profile
+  for select using (auth.role() = 'authenticated'::text);
+
 create policy "clients_authenticated_all" on public.clients
   for all using (auth.role() = 'authenticated'::text)
   with check (auth.role() = 'authenticated'::text);

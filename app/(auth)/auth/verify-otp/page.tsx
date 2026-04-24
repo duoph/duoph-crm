@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -16,20 +16,6 @@ function VerifyOtpInner() {
   const email = searchParams.get("email") ?? "";
   const [pending, setPending] = useState(false);
   const [otp, setOtp] = useState("");
-  const [devHint, setDevHint] = useState(false);
-
-  useEffect(() => {
-    try {
-      const c = sessionStorage.getItem("dcrm_dev_otp");
-      if (c) {
-        setOtp(c);
-        setDevHint(true);
-        sessionStorage.removeItem("dcrm_dev_otp");
-      }
-    } catch {
-      /* */
-    }
-  }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -77,11 +63,6 @@ function VerifyOtpInner() {
       <p className="mb-6 text-sm text-[var(--color-text-secondary)]">
         Enter the code sent to {email || "your inbox"}
       </p>
-      {devHint ? (
-        <p className="mb-4 rounded-[var(--radius-control)] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-          Dev mode: code was filled from signup. If empty, check the toast or server terminal.
-        </p>
-      ) : null}
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label htmlFor="otp" className="mb-1 block text-sm text-[var(--color-text-secondary)]">
