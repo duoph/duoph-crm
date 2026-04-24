@@ -3,6 +3,8 @@ import { clientService } from "@/lib/api/clients";
 import { profileService } from "@/lib/api/profile";
 import { ClientsView } from "@/components/clients/clients-view";
 
+export const dynamic = "force-dynamic";
+
 export default async function ClientsPage() {
   const supabase = await createClient();
   const {

@@ -41,7 +41,7 @@
       },
   
       "typography": {
-        "font_family": "Inter, system-ui, sans-serif",
+        "font_family": "Poppins, system-ui, sans-serif",
         "scale": {
           "xs": "12px",
           "sm": "14px",

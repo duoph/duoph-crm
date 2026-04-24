@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { clientService } from "@/lib/api/clients";
+import { supabaseErrorMessage } from "@/lib/supabase/error-message";
 import type { WorkType } from "@/lib/types/database";
 
 export async function createClientAction(input: {
@@ -18,16 +19,8 @@ export async function createClientAction(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
-  console.log("[createClientAction]", {
-    client_name: input.client_name,
-    email: input.email,
-    contact_number: input.contact_number,
-    country: input.country,
-    work_type: input.work_type,
-    admin_name: input.admin_name,
-  });
   try {
-    await clientService.create(supabase, {
+    const row = await clientService.create(supabase, {
       client_name: input.client_name,
       email: input.email,
       contact_number: input.contact_number,
@@ -35,13 +28,13 @@ export async function createClientAction(input: {
       work_type: input.work_type,
       admin_name: input.admin_name,
     });
-    revalidatePath("/clients");
+    revalidatePath("/clients", "page");
     revalidatePath("/dashboard");
     revalidatePath("/cashflow");
-    return { ok: true as const };
+    return { ok: true as const, id: row.id };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Failed";
-    return { error: msg };
+    console.error("[createClientAction]", e);
+    return { error: supabaseErrorMessage(e) };
   }
 }
 
@@ -67,8 +60,8 @@ export async function updateClientAction(
     revalidatePath("/dashboard");
     return { ok: true as const };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Failed";
-    return { error: msg };
+    console.error("[updateClientAction]", e);
+    return { error: supabaseErrorMessage(e) };
   }
 }
 
@@ -85,7 +78,7 @@ export async function deleteClientAction(id: string) {
     revalidatePath("/cashflow");
     return { ok: true as const };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Failed";
-    return { error: msg };
+    console.error("[deleteClientAction]", e);
+    return { error: supabaseErrorMessage(e) };
   }
 }

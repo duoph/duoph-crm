@@ -17,7 +17,7 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--color-bg-base);
   --color-foreground: var(--color-text-primary);
 }
