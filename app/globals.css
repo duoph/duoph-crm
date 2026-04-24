@@ -32,7 +32,35 @@ body {
   font-family: var(--font-sans);
 }
 
+@layer utilities {
+  .text-xs {
+    font-size: 12px;
+  }
+  .text-sm {
+    font-size: 13px;
+  }
+  .text-base {
+    font-size: 14px;
+  }
+  .text-md {
+    font-size: 15px;
+  }
+  .text-lg {
+    font-size: 16px;
+  }
+  .text-xl {
+    font-size: 18px;
+  }
+  .text-2xl {
+    font-size: 20px;
+  }
+  .text-3xl {
+    font-size: 24px;
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+

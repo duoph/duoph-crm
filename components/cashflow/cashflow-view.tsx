@@ -3,7 +3,7 @@
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { CashflowWithClient, ClientRow, WorkType } from "@/lib/types/database";
+import type { CashflowWithClient, ClientRow, WorkTypeRow } from "@/lib/types/database";
 import {
   createCashflowAction,
   deleteCashflowAction,
@@ -18,22 +18,21 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Table, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { WORK_TYPE_LABEL, workTypeBadgeClass } from "@/lib/utils/work-type";
+import { workTypeBadgeClass } from "@/lib/utils/work-type";
 import { formatDate, formatMoney } from "@/lib/utils/format";
-
-const workTypes: WorkType[] = ["website", "social_media", "branding", "other"];
 
 type Props = {
   initialRows: CashflowWithClient[];
   clients: Pick<ClientRow, "id" | "client_name">[];
+  workTypes: WorkTypeRow[];
 };
 
-export function CashflowView({ initialRows, clients }: Props) {
+export function CashflowView({ initialRows, clients, workTypes }: Props) {
   const router = useRouter();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [clientId, setClientId] = useState("");
-  const [workType, setWorkType] = useState<WorkType | "">("");
+  const [workType, setWorkType] = useState<string>("");
   const [modal, setModal] = useState<"create" | "edit" | null>(null);
   const [editing, setEditing] = useState<CashflowWithClient | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; summary: string } | null>(null);
@@ -61,7 +60,7 @@ export function CashflowView({ initialRows, clients }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Cashflow</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">Income, expenses, and balance</p>
+          <p className="text-sm text-(--color-text-secondary)">Income, expenses, and balance</p>
         </div>
         <Button type="button" onClick={() => setModal("create")}>
           Add entry
@@ -70,15 +69,15 @@ export function CashflowView({ initialRows, clients }: Props) {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
-          <p className="text-xs uppercase text-[var(--color-text-muted)]">Income</p>
+          <p className="text-xs uppercase text-(--color-text-muted)">Income</p>
           <p className="mt-2 text-xl font-semibold text-emerald-400">{formatMoney(totals.income)}</p>
         </Card>
         <Card>
-          <p className="text-xs uppercase text-[var(--color-text-muted)]">Expense</p>
+          <p className="text-xs uppercase text-(--color-text-muted)">Expense</p>
           <p className="mt-2 text-xl font-semibold text-red-400">{formatMoney(totals.expense)}</p>
         </Card>
         <Card>
-          <p className="text-xs uppercase text-[var(--color-text-muted)]">Balance</p>
+          <p className="text-xs uppercase text-(--color-text-muted)">Balance</p>
           <p className="mt-2 text-xl font-semibold text-white">{formatMoney(totals.balance)}</p>
         </Card>
       </div>
@@ -87,15 +86,15 @@ export function CashflowView({ initialRows, clients }: Props) {
         <CardTitle className="mb-4">Filters</CardTitle>
         <div className="mb-6 flex flex-wrap gap-3">
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">From</label>
+            <label className="mb-1 block text-xs text-(--color-text-muted)">From</label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">To</label>
+            <label className="mb-1 block text-xs text-(--color-text-muted)">To</label>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Client</label>
+            <label className="mb-1 block text-xs text-(--color-text-muted)">Client</label>
             <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
               <option value="">All</option>
               {clients.map((c) => (
@@ -106,12 +105,12 @@ export function CashflowView({ initialRows, clients }: Props) {
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Work type</label>
-            <Select value={workType} onChange={(e) => setWorkType(e.target.value as WorkType | "")}>
+            <label className="mb-1 block text-xs text-(--color-text-muted)">Work type</label>
+            <Select value={workType} onChange={(e) => setWorkType(e.target.value)}>
               <option value="">All</option>
               {workTypes.map((w) => (
-                <option key={w} value={w}>
-                  {WORK_TYPE_LABEL[w]}
+                <option key={w.key} value={w.key}>
+                  {w.label}
                 </option>
               ))}
             </Select>
@@ -132,11 +131,13 @@ export function CashflowView({ initialRows, clients }: Props) {
           </thead>
           <tbody>
             {filtered.map((r) => (
-              <tr key={r.id} className="hover:bg-white/[0.03]">
+              <tr key={r.id} className="hover:bg-white/3">
                 <Td>{formatDate(r.date)}</Td>
                 <Td>{r.clients?.client_name ?? "—"}</Td>
                 <Td>
-                  <Badge className={workTypeBadgeClass(r.work_type)}>{WORK_TYPE_LABEL[r.work_type]}</Badge>
+                  <Badge className={workTypeBadgeClass(r.work_type)}>
+                    {workTypes.find((w) => w.key === r.work_type)?.label ?? r.work_type}
+                  </Badge>
                 </Td>
                 <Td className="max-w-[200px] truncate">{r.details ?? "—"}</Td>
                 <Td className="text-right tabular-nums text-emerald-400">
@@ -189,6 +190,7 @@ export function CashflowView({ initialRows, clients }: Props) {
         open={modal === "create"}
         title="New transaction"
         clients={clients}
+        workTypes={workTypes}
         onClose={() => setModal(null)}
         onSaved={() => {
           setModal(null);
@@ -199,6 +201,7 @@ export function CashflowView({ initialRows, clients }: Props) {
         open={modal === "edit"}
         title="Edit transaction"
         clients={clients}
+        workTypes={workTypes}
         initial={editing ?? undefined}
         onClose={() => {
           setModal(null);
@@ -242,6 +245,7 @@ function TxModal({
   open,
   title,
   clients,
+  workTypes,
   initial,
   onClose,
   onSaved,
@@ -249,6 +253,7 @@ function TxModal({
   open: boolean;
   title: string;
   clients: Pick<ClientRow, "id" | "client_name">[];
+  workTypes: WorkTypeRow[];
   initial?: CashflowWithClient;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
@@ -265,7 +270,7 @@ function TxModal({
       expense: Number(fd.get("expense") || 0),
       details: String(fd.get("details") ?? ""),
       client_id: client_id_raw ? client_id_raw : null,
-      work_type: String(fd.get("work_type")) as WorkType,
+        work_type: String(fd.get("work_type")),
     };
     startTransition(async () => {
       if (initial) {
@@ -291,7 +296,7 @@ function TxModal({
     <Modal open={open} title={title} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Date</label>
+          <label className="mb-1 block text-xs text-(--color-text-secondary)">Date</label>
           <Input
             name="date"
             type="date"
@@ -301,20 +306,20 @@ function TxModal({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Income</label>
+            <label className="mb-1 block text-xs text-(--color-text-secondary)">Income</label>
             <Input name="income" type="number" step="0.01" min="0" defaultValue={initial?.income ?? 0} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Expense</label>
+            <label className="mb-1 block text-xs text-(--color-text-secondary)">Expense</label>
             <Input name="expense" type="number" step="0.01" min="0" defaultValue={initial?.expense ?? 0} />
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Details</label>
+          <label className="mb-1 block text-xs text-(--color-text-secondary)">Details</label>
           <Input name="details" defaultValue={initial?.details ?? ""} />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Client</label>
+          <label className="mb-1 block text-xs text-(--color-text-secondary)">Client</label>
           <Select name="client_id" defaultValue={initial?.client_id ?? ""}>
             <option value="">None</option>
             {clients.map((c) => (
@@ -325,11 +330,11 @@ function TxModal({
           </Select>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Work type</label>
+          <label className="mb-1 block text-xs text-(--color-text-secondary)">Work type</label>
           <Select name="work_type" defaultValue={initial?.work_type ?? "website"}>
             {workTypes.map((w) => (
-              <option key={w} value={w}>
-                {WORK_TYPE_LABEL[w]}
+              <option key={w.key} value={w.key}>
+                {w.label}
               </option>
             ))}
           </Select>

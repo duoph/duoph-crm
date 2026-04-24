@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { clientService } from "@/lib/api/clients";
 import { profileService } from "@/lib/api/profile";
+import { workTypeService } from "@/lib/api/work-types";
 import { ClientsView } from "@/components/clients/clients-view";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +13,11 @@ export default async function ClientsPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [clients, profile] = await Promise.all([
+  const [clients, profile, workTypes] = await Promise.all([
     clientService.list(supabase),
     profileService.get(supabase, user.id),
+    workTypeService.list(supabase),
   ]);
 
-  return <ClientsView initialClients={clients} profileName={profile?.admin_name ?? ""} />;
+  return <ClientsView initialClients={clients} profileName={profile?.admin_name ?? ""} workTypes={workTypes} />;
 }

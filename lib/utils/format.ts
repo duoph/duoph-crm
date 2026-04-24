@@ -6,5 +6,9 @@ export function formatMoney(n: number, currency: string = MONEY_CURRENCY) {
 }
 
 export function formatDate(iso: string) {
-  return new Date(iso + (iso.length === 10 ? "T00:00:00" : "")).toLocaleDateString();
+  const d = new Date(iso + (iso.length === 10 ? "T00:00:00Z" : ""));
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }

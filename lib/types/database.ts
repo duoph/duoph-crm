@@ -1,4 +1,26 @@
-export type WorkType = "website" | "social_media" | "branding" | "other";
+export type WorkType = string;
+
+export type WorkTypeRow = {
+  key: string;
+  label: string;
+  created_at: string;
+};
+
+export type WorkStatus = "ongoing" | "completed" | "on_hold" | "pending";
+
+export type WorkItemRow = {
+  id: string;
+  work: string;
+  client_id: string;
+  work_type: string;
+  status: WorkStatus;
+  committed_date: string | null;
+  completed_date: string | null;
+  remarks: string;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export type UsersProfile = {
   id: string;

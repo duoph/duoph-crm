@@ -11,6 +11,7 @@ import { isAdminEmail } from "@/lib/auth/admin";
 const items = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
+  { href: "/work", label: "Work" },
   { href: "/cashflow", label: "Cashflow" },
   { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
@@ -33,7 +34,7 @@ export function Sidebar({
           DCRM
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Main">
+      <nav className="flex flex-1 flex-col  overflow-y-auto " aria-label="Main">
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
@@ -52,17 +53,18 @@ export function Sidebar({
           );
         })}
         {isAdmin ? (
-          <div className="mt-2">
+          <div className="mt-4 border-t border-(--color-border-subtle) pt-4">
+            <p className="mb-2 px-4 text-xs font-medium uppercase tracking-wide text-(--color-text-muted)">Admin</p>
             <Link
-              href="/admin/users"
+              href="/admin"
               className={cn(
                 "rounded-[10px] px-4 py-3 text-sm font-medium transition-colors",
-                pathname === "/admin/users" || pathname.startsWith("/admin/users/")
+                pathname === "/admin" || pathname.startsWith("/admin/")
                   ? "bg-(--color-primary)/20 text-white ring-1 ring-(--color-primary)/40"
                   : "text-(--color-text-secondary) hover:bg-white/5 hover:text-white",
               )}
             >
-              Admin · Users
+              Admin dashboard
             </Link>
           </div>
         ) : null}

@@ -5,11 +5,11 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, Th, Td } from "@/components/ui/table";
 import { formatDate, formatMoney } from "@/lib/utils/format";
-import { WORK_TYPE_LABEL } from "@/lib/utils/work-type";
+import { workTypeService } from "@/lib/api/work-types";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const metrics = await dashboardService.metrics(supabase);
+  const [metrics, workTypes] = await Promise.all([dashboardService.metrics(supabase), workTypeService.list(supabase)]);
 
   const statCards = [
     { label: "Total clients", value: String(metrics.totalClients) },
@@ -23,7 +23,7 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">Overview of your studio</p>
+          <p className="text-sm text-(--color-text-secondary)">Overview of your studio</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/clients">
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((s) => (
           <Card key={s.label}>
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{s.label}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-(--color-text-muted)">{s.label}</p>
             <p className="mt-2 text-2xl font-semibold text-white">{s.value}</p>
           </Card>
         ))}
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
       <Card>
         <CardTitle className="mb-4">Recent transactions</CardTitle>
         {metrics.recentTransactions.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-secondary)]">No transactions yet.</p>
+          <p className="text-sm text-(--color-text-secondary)">No transactions yet.</p>
         ) : (
           <Table>
             <thead>
@@ -63,10 +63,10 @@ export default async function DashboardPage() {
             </thead>
             <tbody>
               {metrics.recentTransactions.map((t) => (
-                <tr key={t.id} className="hover:bg-white/[0.03]">
+                <tr key={t.id} className="hover:bg-white/3">
                   <Td>{formatDate(t.date)}</Td>
                   <Td>{t.details ?? "—"}</Td>
-                  <Td>{WORK_TYPE_LABEL[t.work_type]}</Td>
+                  <Td>{workTypes.find((w) => w.key === t.work_type)?.label ?? t.work_type}</Td>
                   <Td className="text-right tabular-nums text-emerald-400">
                     {Number(t.income) > 0 ? formatMoney(Number(t.income)) : "—"}
                   </Td>
