@@ -22,7 +22,7 @@ export default function AuthLayout({
         />
         <div className="relative z-10 flex min-h-screen flex-col justify-between p-12">
           <div className="flex flex-col items-start justify-center gap-2 text-2xl font-bold text-white">
-            <Image src="/logo-white.png" alt="DCRM" width={250} height={250} />
+            <Image src="/logo-white.png" alt="DCRM" width={200} height={200} />
           </div>
           <div className="max-w-md text-white/90">
             <p className="text-3xl font-semibold leading-tight">

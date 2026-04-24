@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import { logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import type { TeamMemberRoster } from "@/lib/auth/team";
+import { isAdminEmail } from "@/lib/auth/admin";
 
 const items = [
   { href: "/dashboard", label: "Dashboard" },
@@ -15,12 +16,19 @@ const items = [
   { href: "/settings", label: "Settings" },
 ];
 
-export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMemberRoster[] }) {
+export function Sidebar({
+  teamMembers = [],
+  userEmail,
+}: {
+  teamMembers?: TeamMemberRoster[];
+  userEmail?: string | null;
+}) {
   const pathname = usePathname();
+  const isAdmin = isAdminEmail(userEmail);
 
   return (
-    <aside className="flex w-[260px] shrink-0 flex-col border-r border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)]">
-      <div className="flex h-16 items-center border-b border-[var(--color-border-subtle)] px-5">
+    <aside className="flex w-[260px] shrink-0 flex-col border-r border-(--color-border-subtle) bg-(--color-bg-surface)">
+      <div className="flex h-16 items-center border-b border-(--color-border-subtle) px-5">
         <Link href="/dashboard" className="text-lg font-semibold tracking-tight text-white">
           DCRM
         </Link>
@@ -35,24 +43,39 @@ export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMemberRoster[]
               className={cn(
                 "rounded-[10px] px-4 py-3 text-sm font-medium transition-colors",
                 active
-                  ? "bg-[var(--color-primary)]/20 text-white ring-1 ring-[var(--color-primary)]/40"
-                  : "text-[var(--color-text-secondary)] hover:bg-white/5 hover:text-white",
+                  ? "bg-(--color-primary)/20 text-white ring-1 ring-(--color-primary)/40"
+                  : "text-(--color-text-secondary) hover:bg-white/5 hover:text-white",
               )}
             >
               {item.label}
             </Link>
           );
         })}
+        {isAdmin ? (
+          <div className="mt-2">
+            <Link
+              href="/admin/users"
+              className={cn(
+                "rounded-[10px] px-4 py-3 text-sm font-medium transition-colors",
+                pathname === "/admin/users" || pathname.startsWith("/admin/users/")
+                  ? "bg-(--color-primary)/20 text-white ring-1 ring-(--color-primary)/40"
+                  : "text-(--color-text-secondary) hover:bg-white/5 hover:text-white",
+              )}
+            >
+              Admin · Users
+            </Link>
+          </div>
+        ) : null}
         {teamMembers.length > 0 ? (
-          <div className="mt-4 border-t border-[var(--color-border-subtle)] pt-4">
-            <p className="mb-2 px-4 text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+          <div className="mt-4 border-t border-(--color-border-subtle) pt-4">
+            <p className="mb-2 px-4 text-xs font-medium uppercase tracking-wide text-(--color-text-muted)">
               Team
             </p>
             <ul className="space-y-1">
               {teamMembers.map((m) => (
                 <li
                   key={m.id}
-                  className="flex items-center gap-2 rounded-[10px] px-4 py-2 text-sm text-[var(--color-text-secondary)]"
+                  className="flex items-center gap-2 rounded-[10px] px-4 py-2 text-sm text-(--color-text-secondary)"
                 >
                   <span
                     className={cn(
@@ -70,7 +93,7 @@ export function Sidebar({ teamMembers = [] }: { teamMembers?: TeamMemberRoster[]
           </div>
         ) : null}
       </nav>
-      <div className="border-t border-[var(--color-border-subtle)] p-3">
+      <div className="border-t border-(--color-border-subtle) p-3">
         <form action={logoutAction}>
           <Button type="submit" variant="secondary" className="w-full">
             Log out

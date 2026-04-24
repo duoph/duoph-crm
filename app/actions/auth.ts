@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export async function loginAction(_prev: { error?: string } | null, formData: FormData) {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get("password") ?? "").trim();
   const next = String(formData.get("next") ?? "/dashboard");
 
   const supabase = await createClient();

@@ -8,5 +8,9 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     data: { user },
   } = await supabase.auth.getUser();
   const teamMembers = user ? await getTeamRoster() : [];
-  return <AppShell teamMembers={teamMembers}>{children}</AppShell>;
+  return (
+    <AppShell teamMembers={teamMembers} userEmail={user?.email ?? null}>
+      {children}
+    </AppShell>
+  );
 }

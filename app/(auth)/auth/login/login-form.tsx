@@ -14,13 +14,13 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={nextPath} />
       <div>
-        <label htmlFor="email" className="mb-1 block text-sm text-[var(--color-text-secondary)]">
+        <label htmlFor="email" className="mb-1 block text-sm text-(--color-text-secondary)">
           Email
         </label>
         <Input id="email" name="email" type="email" autoComplete="email" required />
       </div>
       <div>
-        <label htmlFor="password" className="mb-1 block text-sm text-[var(--color-text-secondary)]">
+        <label htmlFor="password" className="mb-1 block text-sm text-(--color-text-secondary)">
           Password
         </label>
         <PasswordInput id="password" name="password" autoComplete="current-password" required />
@@ -33,13 +33,9 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
       </Button>
-      <p className="text-center text-sm text-[var(--color-text-muted)]">
-        <Link href="/auth/forgot-password" className="text-[var(--color-primary)] hover:underline">
+      <p className="text-center text-sm text-(--color-text-muted)">
+        <Link href="/auth/forgot-password" className="text-(--color-primary) hover:underline">
           Forgot password?
-        </Link>
-        {" · "}
-        <Link href="/auth/signup" className="text-[var(--color-primary)] hover:underline">
-          Create account
         </Link>
       </p>
     </form>
