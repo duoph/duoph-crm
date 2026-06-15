@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { cashflowService } from "@/lib/api/cashflow";
 import type { WorkType } from "@/lib/types/database";
 
@@ -13,13 +13,10 @@ export async function createCashflowAction(input: {
   client_id: string | null;
   work_type: WorkType;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
   try {
-    await cashflowService.create(supabase, {
+    await cashflowService.create({
       date: input.date,
       income: input.income,
       expense: input.expense,
@@ -48,13 +45,10 @@ export async function updateCashflowAction(
     work_type: WorkType;
   }>,
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
   try {
-    await cashflowService.update(supabase, id, input);
+    await cashflowService.update(id, input);
     revalidatePath("/cashflow");
     revalidatePath("/dashboard");
     revalidatePath("/reports");
@@ -66,13 +60,10 @@ export async function updateCashflowAction(
 }
 
 export async function deleteCashflowAction(id: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
   try {
-    await cashflowService.remove(supabase, id);
+    await cashflowService.remove(id);
     revalidatePath("/cashflow");
     revalidatePath("/dashboard");
     revalidatePath("/reports");

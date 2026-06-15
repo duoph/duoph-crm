@@ -1,12 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { isAdminEmail } from "@/lib/auth/admin";
 import { AdminCreateUser } from "@/components/settings/admin-create-user";
 
 export default async function AdminUsersPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
 
   if (!user || !isAdminEmail(user.email)) return null;
 
@@ -20,4 +17,3 @@ export default async function AdminUsersPage() {
     </div>
   );
 }
-

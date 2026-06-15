@@ -1,16 +1,13 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { isAdminEmail } from "@/lib/auth/admin";
 import { workTypeService } from "@/lib/api/work-types";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 
 export default async function AdminHomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
 
   if (!user || !isAdminEmail(user.email)) return null;
-  const workTypes = await workTypeService.list(supabase);
+  const workTypes = await workTypeService.list();
 
   return (
     <div className="space-y-6">
@@ -22,4 +19,3 @@ export default async function AdminHomePage() {
     </div>
   );
 }
-

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { randomBytes } from "crypto";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { findAuthUserByEmail } from "@/lib/auth/admin-users";
+import { COL, getDb } from "@/lib/db/mongodb";
+import { findUserByEmail } from "@/lib/auth/users";
 import { sendPasswordResetEmail } from "@/lib/email/send";
 import { hashResetToken } from "@/lib/crypto/otp";
 
@@ -18,9 +18,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
     const email = parsed.data.email.toLowerCase();
-    const admin = createAdminClient();
-    const authUser = await findAuthUserByEmail(admin, email);
-    const userId = authUser?.id;
+    const authUser = await findUserByEmail(email);
+    const userId = authUser?._id.toString();
 
     if (!userId) {
       return NextResponse.json({ ok: true });
@@ -28,18 +27,16 @@ export async function POST(req: Request) {
 
     const token = randomBytes(32).toString("hex");
     const token_hash = hashResetToken(token);
-    const expires_at = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const expires_at = new Date(Date.now() + 60 * 60 * 1000);
 
-    await admin.from("password_reset_tokens").delete().eq("user_id", userId);
-    const { error } = await admin.from("password_reset_tokens").insert({
+    const db = await getDb();
+    await db.collection(COL.password_reset_tokens).deleteMany({ user_id: userId });
+    await db.collection(COL.password_reset_tokens).insertOne({
       user_id: userId,
       token_hash,
       expires_at,
+      created_at: new Date(),
     });
-    if (error) {
-      console.error(error);
-      return NextResponse.json({ error: "Could not start reset" }, { status: 500 });
-    }
 
     const base = process.env.APP_URL ?? "http://localhost:3000";
     const resetUrl = `${base}/auth/reset-password?token=${encodeURIComponent(token)}`;

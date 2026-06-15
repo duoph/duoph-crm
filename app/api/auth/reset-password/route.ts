@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { COL, getDb } from "@/lib/db/mongodb";
+import { updateUserPassword } from "@/lib/auth/users";
 import { hashResetToken } from "@/lib/crypto/otp";
 import { validatePassword } from "@/lib/validation/password";
 
@@ -22,29 +23,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: pw.message }, { status: 400 });
     }
 
-    const admin = createAdminClient();
+    const db = await getDb();
     const token_hash = hashResetToken(token.trim());
-    const { data: row, error: fetchErr } = await admin
-      .from("password_reset_tokens")
-      .select("*")
-      .eq("token_hash", token_hash)
-      .maybeSingle();
+    const row = await db.collection(COL.password_reset_tokens).findOne({ token_hash });
 
-    if (fetchErr || !row) {
+    if (!row) {
       return NextResponse.json({ error: "Invalid or expired link" }, { status: 400 });
     }
-    if (new Date(row.expires_at) < new Date()) {
-      await admin.from("password_reset_tokens").delete().eq("id", row.id);
+    if (new Date(row.expires_at as Date) < new Date()) {
+      await db.collection(COL.password_reset_tokens).deleteOne({ _id: row._id });
       return NextResponse.json({ error: "Link expired" }, { status: 400 });
     }
 
-    const { error: updErr } = await admin.auth.admin.updateUserById(row.user_id, { password });
-    if (updErr) {
-      console.error(updErr);
-      return NextResponse.json({ error: updErr.message }, { status: 500 });
-    }
-
-    await admin.from("password_reset_tokens").delete().eq("user_id", row.user_id);
+    await updateUserPassword(row.user_id as string, password);
+    await db.collection(COL.password_reset_tokens).deleteMany({ user_id: row.user_id });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

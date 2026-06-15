@@ -1,9 +1,10 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { WorkItemRow } from "@/lib/types/database";
+import "server-only";
 
-export type WorkItemWithClient = WorkItemRow & {
-  clients: { id: string; client_name: string } | null;
-};
+import { ObjectId } from "mongodb";
+import { COL, getDb } from "@/lib/db/mongodb";
+import { toDateOnly, toId, toIso } from "@/lib/db/serialize";
+import { clientService } from "@/lib/api/clients";
+import type { WorkItemWithClient, WorkItemRow } from "@/lib/types/database";
 
 export type WorkListParams = {
   q?: string;
@@ -16,57 +17,105 @@ export type WorkListParams = {
   pageSize?: number;
 };
 
-export const workItemService = {
-  async list(
-    supabase: SupabaseClient,
-    params: WorkListParams = {},
-  ): Promise<{ rows: WorkItemWithClient[]; total: number }> {
-    const page = Math.max(1, Math.floor(params.page ?? 1));
-    const pageSize = Math.min(100, Math.max(10, Math.floor(params.pageSize ?? 20)));
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
-    let q = supabase
-      .from("work_items")
-      .select("*, clients(id, client_name)", { count: "exact" })
-      .is("deleted_at", null);
-
-    if (params.q?.trim()) {
-      const s = params.q.trim();
-      q = q.or(`work.ilike.%${s}%,remarks.ilike.%${s}%`);
-    }
-    if (params.status?.trim()) q = q.eq("status", params.status.trim());
-    if (params.client_id?.trim()) q = q.eq("client_id", params.client_id.trim());
-    if (params.work_type?.trim()) q = q.eq("work_type", params.work_type.trim());
-
-    const sort = params.sort ?? "created_at";
-    const dir = params.dir ?? "desc";
-    q = q.order(sort, { ascending: dir === "asc", nullsFirst: false }).range(from, to);
-
-    const { data, error, count } = await q;
-    if (error) {
-      const code = (error as { code?: string } | null)?.code;
-      if (code === "PGRST205") return { rows: [], total: 0 };
-      throw error;
-    }
-    return { rows: (data ?? []) as WorkItemWithClient[], total: count ?? 0 };
-  },
-
-  async create(supabase: SupabaseClient, row: Omit<WorkItemRow, "id" | "created_at" | "updated_at">) {
-    const { data, error } = await supabase.from("work_items").insert(row).select().single();
-    if (error) throw error;
-    return data as WorkItemRow;
-  },
-
-  async update(supabase: SupabaseClient, id: string, patch: Partial<Omit<WorkItemRow, "id" | "created_at" | "updated_at">>) {
-    const { data, error } = await supabase.from("work_items").update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return data as WorkItemRow;
-  },
-
-  async softDelete(supabase: SupabaseClient, id: string) {
-    const { error } = await supabase.from("work_items").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-    if (error) throw error;
-  },
+type WorkItemDoc = {
+  _id: ObjectId;
+  work: string;
+  client_id: string;
+  work_type: string;
+  status: string;
+  committed_date: string | null;
+  completed_date: string | null;
+  remarks: string;
+  deleted_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
 };
 
+function toRow(doc: WorkItemDoc): WorkItemRow {
+  return {
+    id: toId(doc._id),
+    work: doc.work,
+    client_id: doc.client_id,
+    work_type: doc.work_type,
+    status: doc.status as WorkItemRow["status"],
+    committed_date: toDateOnly(doc.committed_date),
+    completed_date: toDateOnly(doc.completed_date),
+    remarks: doc.remarks,
+    deleted_at: toIso(doc.deleted_at),
+    created_at: toIso(doc.created_at)!,
+    updated_at: toIso(doc.updated_at)!,
+  };
+}
+
+export const workItemService = {
+  async list(params: WorkListParams = {}): Promise<{ rows: WorkItemWithClient[]; total: number }> {
+    const page = Math.max(1, Math.floor(params.page ?? 1));
+    const pageSize = Math.min(100, Math.max(10, Math.floor(params.pageSize ?? 20)));
+    const skip = (page - 1) * pageSize;
+
+    const filter: Record<string, unknown> = { deleted_at: null };
+    if (params.status?.trim()) filter.status = params.status.trim();
+    if (params.client_id?.trim()) filter.client_id = params.client_id.trim();
+    if (params.work_type?.trim()) filter.work_type = params.work_type.trim();
+    if (params.q?.trim()) {
+      const s = params.q.trim();
+      filter.$or = [
+        { work: { $regex: s, $options: "i" } },
+        { remarks: { $regex: s, $options: "i" } },
+      ];
+    }
+
+    const sortField = params.sort ?? "created_at";
+    const sortDir = params.dir === "asc" ? 1 : -1;
+
+    const db = await getDb();
+    const col = db.collection<WorkItemDoc>(COL.work_items);
+    const [docs, total] = await Promise.all([
+      col.find(filter).sort({ [sortField]: sortDir }).skip(skip).limit(pageSize).toArray(),
+      col.countDocuments(filter),
+    ]);
+
+    const clientIds = [...new Set(docs.map((d) => d.client_id))];
+    const clients = await clientService.getManyByIds(clientIds);
+
+    const rows = docs.map((doc) => {
+      const row = toRow(doc);
+      const c = clients.get(doc.client_id);
+      return { ...row, clients: c ? { id: c.id, client_name: c.client_name } : null };
+    });
+
+    return { rows, total };
+  },
+
+  async create(row: Omit<WorkItemRow, "id" | "created_at" | "updated_at">) {
+    const db = await getDb();
+    const now = new Date();
+    const result = await db.collection(COL.work_items).insertOne({
+      ...row,
+      created_at: now,
+      updated_at: now,
+      deleted_at: row.deleted_at ? new Date(row.deleted_at) : null,
+    });
+    return toRow({ _id: result.insertedId, ...row, created_at: now, updated_at: now, deleted_at: null } as WorkItemDoc);
+  },
+
+  async update(id: string, patch: Partial<Omit<WorkItemRow, "id" | "created_at" | "updated_at">>) {
+    const db = await getDb();
+    const set: Record<string, unknown> = { ...patch, updated_at: new Date() };
+    if (patch.deleted_at !== undefined) {
+      set.deleted_at = patch.deleted_at ? new Date(patch.deleted_at) : null;
+    }
+    const result = await db
+      .collection<WorkItemDoc>(COL.work_items)
+      .findOneAndUpdate({ _id: new ObjectId(id) }, { $set: set }, { returnDocument: "after" });
+    if (!result) throw new Error("Work item not found");
+    return toRow(result);
+  },
+
+  async softDelete(id: string) {
+    const db = await getDb();
+    await db
+      .collection(COL.work_items)
+      .updateOne({ _id: new ObjectId(id) }, { $set: { deleted_at: new Date(), updated_at: new Date() } });
+  },
+};

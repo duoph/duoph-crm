@@ -9,7 +9,7 @@ import {
   deleteCashflowAction,
   updateCashflowAction,
 } from "@/app/actions/cashflow";
-import { cashflowService } from "@/lib/api/cashflow";
+import { cashflowTotals } from "@/lib/utils/cashflow";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,7 @@ export function CashflowView({ initialRows, clients, workTypes }: Props) {
     });
   }, [optimisticRows, from, to, clientId, workType]);
 
-  const totals = cashflowService.totals(filtered);
+  const totals = cashflowTotals(filtered);
 
   return (
     <div className="space-y-6">

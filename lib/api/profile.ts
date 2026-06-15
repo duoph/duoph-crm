@@ -1,25 +1,24 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
+
+import { findUserById, updateUserProfile } from "@/lib/auth/users";
 import type { UsersProfile } from "@/lib/types/database";
+import { toIso } from "@/lib/db/serialize";
 
 export const profileService = {
-  async get(supabase: SupabaseClient, userId: string): Promise<UsersProfile | null> {
-    const { data, error } = await supabase
-      .from("users_profile")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-    if (error) throw error;
-    return (data as UsersProfile) ?? null;
+  async get(userId: string): Promise<UsersProfile | null> {
+    const user = await findUserById(userId);
+    if (!user) return null;
+    return {
+      id: user._id.toString(),
+      admin_name: user.admin_name,
+      created_at: toIso(user.created_at)!,
+    };
   },
 
-  async update(supabase: SupabaseClient, userId: string, admin_name: string): Promise<UsersProfile> {
-    const { data, error } = await supabase
-      .from("users_profile")
-      .update({ admin_name })
-      .eq("id", userId)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as UsersProfile;
+  async update(userId: string, admin_name: string): Promise<UsersProfile> {
+    await updateUserProfile(userId, admin_name);
+    const profile = await this.get(userId);
+    if (!profile) throw new Error("User not found");
+    return profile;
   },
 };

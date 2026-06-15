@@ -1,12 +1,9 @@
-import { AppShell } from "@/components/layout/app-shell";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { getTeamRoster } from "@/lib/auth/team";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   const teamMembers = user ? await getTeamRoster() : [];
   return (
     <AppShell teamMembers={teamMembers} userEmail={user?.email ?? null}>

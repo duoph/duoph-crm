@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ClientRow, WorkStatus, WorkTypeRow } from "@/lib/types/database";
-import type { WorkItemWithClient } from "@/lib/api/work-items";
+import type { WorkItemWithClient } from "@/lib/types/database";
 import { createWorkItemAction, deleteWorkItemAction, updateWorkItemAction } from "@/app/actions/work-items";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ export function WorkView({ initialRows, total, clients, workTypes }: Props) {
   const [modal, setModal] = useState<"create" | "edit" | null>(null);
   const [editing, setEditing] = useState<WorkItemWithClient | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WorkItemWithClient | null>(null);
-  const [pending, startTransition] = useTransition();
 
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -150,9 +149,12 @@ export function WorkView({ initialRows, total, clients, workTypes }: Props) {
               value={`${sort}:${dir}`}
               onChange={(e) => {
                 const [s, d] = e.target.value.split(":");
-                setSort(s as any);
-                setDir(d as any);
-                refreshWithParams({ sort: s, dir: d, page: "1" });
+                const nextSort =
+                  s === "created_at" || s === "committed_date" || s === "completed_date" || s === "status" ? s : "created_at";
+                const nextDir = d === "asc" || d === "desc" ? d : "desc";
+                setSort(nextSort);
+                setDir(nextDir);
+                refreshWithParams({ sort: nextSort, dir: nextDir, page: "1" });
               }}
             >
               <option value="created_at:desc">Newest</option>

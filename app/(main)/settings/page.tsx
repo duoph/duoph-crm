@@ -1,17 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { profileService } from "@/lib/api/profile";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { AdminCreateUser } from "@/components/settings/admin-create-user";
 import { isAdminEmail } from "@/lib/auth/admin";
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return null;
 
-  const profile = await profileService.get(supabase, user.id);
+  const profile = await profileService.get(user.id);
   const isAdmin = isAdminEmail(user.email);
 
   return (

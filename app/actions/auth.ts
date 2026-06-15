@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { clearSessionCookie, createSessionToken, setSessionCookie } from "@/lib/auth/session";
+import { touchLastSignIn, userToSession, verifyUserPassword } from "@/lib/auth/users";
 
 export async function loginAction(_prev: { error?: string } | null, formData: FormData) {
   const email = String(formData.get("email") ?? "")
@@ -11,18 +12,30 @@ export async function loginAction(_prev: { error?: string } | null, formData: Fo
   const password = String(formData.get("password") ?? "").trim();
   const next = String(formData.get("next") ?? "/dashboard");
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    return { error: error.message };
+  let destination = "/dashboard";
+  try {
+    const user = await verifyUserPassword(email, password);
+    if (!user) {
+      return { error: "Invalid email or password" };
+    }
+    await touchLastSignIn(user._id.toString());
+    const token = await createSessionToken(userToSession(user));
+    await setSessionCookie(token);
+    revalidatePath("/", "layout");
+    destination = next.startsWith("/") ? next : "/dashboard";
+  } catch (e) {
+    console.error("[loginAction]", e);
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.includes("bad auth") || msg.includes("Authentication failed")) {
+      return { error: "Database connection failed. Check MONGODB_URI in .env.local." };
+    }
+    return { error: "Sign in failed. Try again later." };
   }
-  revalidatePath("/", "layout");
-  redirect(next.startsWith("/") ? next : "/dashboard");
+  redirect(destination);
 }
 
 export async function logoutAction() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  await clearSessionCookie();
   revalidatePath("/", "layout");
   redirect("/auth/login");
 }

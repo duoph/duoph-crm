@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { dashboardService } from "@/lib/api/dashboard";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +7,7 @@ import { formatDate, formatMoney } from "@/lib/utils/format";
 import { workTypeService } from "@/lib/api/work-types";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const [metrics, workTypes] = await Promise.all([dashboardService.metrics(supabase), workTypeService.list(supabase)]);
+  const [metrics, workTypes] = await Promise.all([dashboardService.metrics(), workTypeService.list()]);
 
   const statCards = [
     { label: "Total clients", value: String(metrics.totalClients) },

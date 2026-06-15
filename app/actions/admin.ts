@@ -1,10 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getSession } from "@/lib/auth/session";
+import { createUser, findUserByEmail } from "@/lib/auth/users";
 import { validatePassword } from "@/lib/validation/password";
-import { findAuthUserByEmail } from "@/lib/auth/admin-users";
 import { isAdminEmail } from "@/lib/auth/admin";
 
 const createUserSchema = z.object({
@@ -14,10 +13,7 @@ const createUserSchema = z.object({
 });
 
 export async function adminCreateUserAction(_prev: { error?: string; ok?: boolean } | null, formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
 
   if (!user || !isAdminEmail(user.email)) {
     return { error: "Forbidden" };
@@ -32,18 +28,18 @@ export async function adminCreateUserAction(_prev: { error?: string; ok?: boolea
   const pw = validatePassword(password);
   if (!pw.ok) return { error: pw.message };
 
-  const admin = createAdminClient();
-  const existing = await findAuthUserByEmail(admin, parsed.data.email);
+  const existing = await findUserByEmail(parsed.data.email);
   if (existing) return { error: "Email already registered" };
 
-  const { error } = await admin.auth.admin.createUser({
-    email: parsed.data.email.toLowerCase(),
-    password: parsed.data.password,
-    email_confirm: true,
-    user_metadata: { admin_name: parsed.data.admin_name },
-  });
-
-  if (error) return { error: error.message };
-  return { ok: true };
+  try {
+    await createUser({
+      email: parsed.data.email.toLowerCase(),
+      password: parsed.data.password,
+      admin_name: parsed.data.admin_name,
+    });
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Failed";
+    return { error: msg };
+  }
 }
-

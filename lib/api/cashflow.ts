@@ -1,4 +1,9 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
+
+import { ObjectId } from "mongodb";
+import { COL, getDb } from "@/lib/db/mongodb";
+import { toDateOnly, toId, toIso } from "@/lib/db/serialize";
+import { clientService } from "@/lib/api/clients";
 import type { CashflowRow, CashflowWithClient, WorkType } from "@/lib/types/database";
 
 export type CashflowFilters = {
@@ -8,59 +13,76 @@ export type CashflowFilters = {
   work_type?: WorkType;
 };
 
+type CashflowDoc = {
+  _id: ObjectId;
+  date: string;
+  income: number;
+  expense: number;
+  details: string | null;
+  client_id: string | null;
+  work_type: string;
+  created_at: Date;
+};
+
+function toRow(doc: CashflowDoc): CashflowRow {
+  return {
+    id: toId(doc._id),
+    date: toDateOnly(doc.date)!,
+    income: Number(doc.income),
+    expense: Number(doc.expense),
+    details: doc.details,
+    client_id: doc.client_id,
+    work_type: doc.work_type as WorkType,
+    created_at: toIso(doc.created_at)!,
+  };
+}
+
 export const cashflowService = {
-  async list(supabase: SupabaseClient, filters?: CashflowFilters): Promise<CashflowWithClient[]> {
-    let q = supabase
-      .from("cashflow")
-      .select("*, clients(id, client_name, email)")
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false });
+  async list(filters?: CashflowFilters): Promise<CashflowWithClient[]> {
+    const db = await getDb();
+    const filter: Record<string, unknown> = {};
+    if (filters?.from) filter.date = { ...(filter.date as object), $gte: filters.from };
+    if (filters?.to) filter.date = { ...(filter.date as object), $lte: filters.to };
+    if (filters?.client_id) filter.client_id = filters.client_id;
+    if (filters?.work_type) filter.work_type = filters.work_type;
 
-    if (filters?.from) {
-      q = q.gte("date", filters.from);
-    }
-    if (filters?.to) {
-      q = q.lte("date", filters.to);
-    }
-    if (filters?.client_id) {
-      q = q.eq("client_id", filters.client_id);
-    }
-    if (filters?.work_type) {
-      q = q.eq("work_type", filters.work_type);
-    }
+    const docs = await db
+      .collection<CashflowDoc>(COL.cashflow)
+      .find(filter)
+      .sort({ date: -1, created_at: -1 })
+      .toArray();
 
-    const { data, error } = await q;
-    if (error) throw error;
-    return (data ?? []) as CashflowWithClient[];
+    const clientIds = [...new Set(docs.map((d) => d.client_id).filter(Boolean))] as string[];
+    const clients = await clientService.getManyByIds(clientIds);
+
+    return docs.map((doc) => {
+      const row = toRow(doc);
+      const c = doc.client_id ? clients.get(doc.client_id) : null;
+      return {
+        ...row,
+        clients: c ? { id: c.id, client_name: c.client_name, email: c.email } : null,
+      };
+    });
   },
 
-  async create(
-    supabase: SupabaseClient,
-    row: Omit<CashflowRow, "id" | "created_at">,
-  ): Promise<CashflowRow> {
-    const { data, error } = await supabase.from("cashflow").insert(row).select().single();
-    if (error) throw error;
-    return data as CashflowRow;
+  async create(row: Omit<CashflowRow, "id" | "created_at">): Promise<CashflowRow> {
+    const db = await getDb();
+    const now = new Date();
+    const result = await db.collection(COL.cashflow).insertOne({ ...row, created_at: now });
+    return toRow({ _id: result.insertedId, ...row, created_at: now } as CashflowDoc);
   },
 
-  async update(
-    supabase: SupabaseClient,
-    id: string,
-    patch: Partial<Omit<CashflowRow, "id" | "created_at">>,
-  ): Promise<CashflowRow> {
-    const { data, error } = await supabase.from("cashflow").update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return data as CashflowRow;
+  async update(id: string, patch: Partial<Omit<CashflowRow, "id" | "created_at">>): Promise<CashflowRow> {
+    const db = await getDb();
+    const result = await db
+      .collection<CashflowDoc>(COL.cashflow)
+      .findOneAndUpdate({ _id: new ObjectId(id) }, { $set: patch }, { returnDocument: "after" });
+    if (!result) throw new Error("Transaction not found");
+    return toRow(result);
   },
 
-  async remove(supabase: SupabaseClient, id: string): Promise<void> {
-    const { error } = await supabase.from("cashflow").delete().eq("id", id);
-    if (error) throw error;
-  },
-
-  totals(rows: Pick<CashflowRow, "income" | "expense">[]) {
-    const income = rows.reduce((s, r) => s + Number(r.income), 0);
-    const expense = rows.reduce((s, r) => s + Number(r.expense), 0);
-    return { income, expense, balance: income - expense };
+  async remove(id: string): Promise<void> {
+    const db = await getDb();
+    await db.collection(COL.cashflow).deleteOne({ _id: new ObjectId(id) });
   },
 };

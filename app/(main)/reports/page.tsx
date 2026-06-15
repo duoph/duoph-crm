@@ -1,10 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
 import { reportsService } from "@/lib/api/reports";
 import { ReportCharts } from "@/components/reports/report-charts";
 
 export default async function ReportsPage() {
-  const supabase = await createClient();
-  const rows = await reportsService.raw(supabase);
+  const rows = await reportsService.raw();
   const monthly = reportsService.monthlySeries(rows, 6);
   const weekly = reportsService.weeklySeries(rows, 8);
   const byClient = reportsService.revenueByClient(rows);

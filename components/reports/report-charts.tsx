@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { PeriodPoint } from "@/lib/api/reports";
+import type { PeriodPoint } from "@/lib/types/database";
 import { Card, CardTitle } from "@/components/ui/card";
 
 export function ReportCharts({

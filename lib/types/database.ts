@@ -53,3 +53,9 @@ export type CashflowRow = {
 export type CashflowWithClient = CashflowRow & {
   clients: Pick<ClientRow, "id" | "client_name" | "email"> | null;
 };
+
+export type WorkItemWithClient = WorkItemRow & {
+  clients: { id: string; client_name: string } | null;
+};
+
+export type PeriodPoint = { label: string; income: number; expense: number };

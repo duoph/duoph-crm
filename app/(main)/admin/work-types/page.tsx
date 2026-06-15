@@ -1,17 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { isAdminEmail } from "@/lib/auth/admin";
 import { workTypeService } from "@/lib/api/work-types";
 import { WorkTypesManager } from "@/components/admin/work-types-manager";
 
 export default async function AdminWorkTypesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
 
   if (!user || !isAdminEmail(user.email)) return null;
 
-  const workTypes = await workTypeService.list(supabase);
+  const workTypes = await workTypeService.list();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -23,4 +20,3 @@ export default async function AdminWorkTypesPage() {
     </div>
   );
 }
-

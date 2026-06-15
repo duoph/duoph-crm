@@ -1,17 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { profileService } from "@/lib/api/profile";
 
 export async function updateProfileAction(admin_name: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
   try {
-    await profileService.update(supabase, user.id, admin_name);
+    await profileService.update(user.id, admin_name);
     revalidatePath("/settings");
     return { ok: true as const };
   } catch (e) {

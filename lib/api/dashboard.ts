@@ -1,16 +1,19 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
+
 import { cashflowService } from "@/lib/api/cashflow";
+import { cashflowTotals } from "@/lib/utils/cashflow";
+import { COL, getDb } from "@/lib/db/mongodb";
 
 export const dashboardService = {
-  async metrics(supabase: SupabaseClient) {
-    const [{ count: clientCount, error: cErr }, txs] = await Promise.all([
-      supabase.from("clients").select("*", { count: "exact", head: true }),
-      cashflowService.list(supabase),
+  async metrics() {
+    const db = await getDb();
+    const [clientCount, txs] = await Promise.all([
+      db.collection(COL.clients).countDocuments(),
+      cashflowService.list(),
     ]);
-    if (cErr) throw cErr;
-    const { income, expense, balance } = cashflowService.totals(txs);
+    const { income, expense, balance } = cashflowTotals(txs);
     return {
-      totalClients: clientCount ?? 0,
+      totalClients: clientCount,
       totalIncome: income,
       totalExpense: expense,
       balance,

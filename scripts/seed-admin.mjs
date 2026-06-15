@@ -12,29 +12,24 @@ function requireEnv(name) {
 }
 
 async function main() {
-  if (process.env.RESET_USERS_CONFIRM !== "YES") {
-    throw new Error('Refusing to run. Set RESET_USERS_CONFIRM="YES" to proceed.');
-  }
-
   const uri = requireEnv("MONGODB_URI");
   const dbName = process.env.MONGODB_DB ?? "dcrm";
   const client = new MongoClient(uri);
   await client.connect();
   const db = client.db(dbName);
 
-  await db.collection("users").deleteMany({});
-  await db.collection("password_reset_tokens").deleteMany({});
-
   const password_hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-  await db.collection("users").insertOne({
-    email: ADMIN_EMAIL,
-    password_hash,
-    admin_name: ADMIN_NAME,
-    created_at: new Date(),
-    last_sign_in_at: null,
-  });
+  const result = await db.collection("users").updateOne(
+    { email: ADMIN_EMAIL },
+    {
+      $set: { email: ADMIN_EMAIL, password_hash, admin_name: ADMIN_NAME },
+      $setOnInsert: { created_at: new Date(), last_sign_in_at: null },
+    },
+    { upsert: true },
+  );
 
-  process.stdout.write(`created admin ${ADMIN_EMAIL}\n`);
+  const action = result.upsertedCount ? "created" : "updated";
+  process.stdout.write(`${action} admin ${ADMIN_EMAIL}\n`);
   await client.close();
 }
 

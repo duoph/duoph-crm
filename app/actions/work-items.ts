@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import { supabaseErrorMessage } from "@/lib/supabase/error-message";
+import { getSession } from "@/lib/auth/session";
+import { dbErrorMessage } from "@/lib/db/error-message";
 import type { WorkStatus } from "@/lib/types/database";
 import { workItemService } from "@/lib/api/work-items";
 
@@ -11,7 +11,7 @@ const STATUS: WorkStatus[] = ["ongoing", "completed", "on_hold", "pending"];
 
 const createSchema = z.object({
   work: z.string().min(1, "Work is required"),
-  client_id: z.string().uuid("Client is required"),
+  client_id: z.string().min(1, "Client is required"),
   work_type: z.string().min(1, "Work type is required"),
   status: z.enum(STATUS).optional(),
   committed_date: z.string().optional(),
@@ -30,10 +30,6 @@ function validateBusiness(status: WorkStatus, committed: string | null, complete
   return null;
 }
 
-function isMissingWorkItemsTable(err: unknown) {
-  return !!(err as { code?: string } | null)?.code && (err as { code?: string } | null)?.code === "PGRST205";
-}
-
 export async function createWorkItemAction(input: {
   work: string;
   client_id: string;
@@ -43,10 +39,7 @@ export async function createWorkItemAction(input: {
   completed_date?: string;
   remarks?: string;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
 
   const parsed = createSchema.safeParse(input);
@@ -59,7 +52,7 @@ export async function createWorkItemAction(input: {
   if (bizErr) return { error: bizErr };
 
   try {
-    const row = await workItemService.create(supabase, {
+    const row = await workItemService.create({
       work: parsed.data.work.trim(),
       client_id: parsed.data.client_id,
       work_type: parsed.data.work_type.trim(),
@@ -73,8 +66,7 @@ export async function createWorkItemAction(input: {
     revalidatePath("/dashboard");
     return { ok: true as const, id: row.id };
   } catch (e) {
-    if (isMissingWorkItemsTable(e)) return { error: "Database not ready: run supabase/migrations/004_work_items.sql" };
-    return { error: supabaseErrorMessage(e) };
+    return { error: dbErrorMessage(e) };
   }
 }
 
@@ -90,10 +82,7 @@ export async function updateWorkItemAction(
     remarks: string;
   }>,
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
 
   const status = (patch.status ?? "pending") as WorkStatus;
@@ -107,7 +96,7 @@ export async function updateWorkItemAction(
   if (bizErr) return { error: bizErr };
 
   try {
-    await workItemService.update(supabase, id, {
+    await workItemService.update(id, {
       ...(patch.work !== undefined ? { work: patch.work.trim() } : null),
       ...(patch.client_id !== undefined ? { client_id: patch.client_id } : null),
       ...(patch.work_type !== undefined ? { work_type: patch.work_type.trim() } : null),
@@ -120,26 +109,20 @@ export async function updateWorkItemAction(
     revalidatePath("/dashboard");
     return { ok: true as const };
   } catch (e) {
-    if (isMissingWorkItemsTable(e)) return { error: "Database not ready: run supabase/migrations/004_work_items.sql" };
-    return { error: supabaseErrorMessage(e) };
+    return { error: dbErrorMessage(e) };
   }
 }
 
 export async function deleteWorkItemAction(id: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
 
   try {
-    await workItemService.softDelete(supabase, id);
+    await workItemService.softDelete(id);
     revalidatePath("/work");
     revalidatePath("/dashboard");
     return { ok: true as const };
   } catch (e) {
-    if (isMissingWorkItemsTable(e)) return { error: "Database not ready: run supabase/migrations/004_work_items.sql" };
-    return { error: supabaseErrorMessage(e) };
+    return { error: dbErrorMessage(e) };
   }
 }
-

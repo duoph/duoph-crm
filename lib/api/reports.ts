@@ -1,13 +1,12 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
+
 import { cashflowService } from "@/lib/api/cashflow";
-import type { CashflowWithClient } from "@/lib/types/database";
+import type { CashflowWithClient, PeriodPoint } from "@/lib/types/database";
 import { endOfMonth, endOfWeek, format, parseISO, startOfMonth, startOfWeek, subMonths, subWeeks } from "date-fns";
 
-export type PeriodPoint = { label: string; income: number; expense: number };
-
 export const reportsService = {
-  async raw(supabase: SupabaseClient) {
-    return cashflowService.list(supabase);
+  async raw() {
+    return cashflowService.list();
   },
 
   monthlySeries(rows: CashflowWithClient[], monthsBack = 6): PeriodPoint[] {

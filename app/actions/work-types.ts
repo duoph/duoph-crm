@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getSession } from "@/lib/auth/session";
 import { isAdminEmail } from "@/lib/auth/admin";
-import { supabaseErrorMessage } from "@/lib/supabase/error-message";
+import { dbErrorMessage } from "@/lib/db/error-message";
+import { workTypeService } from "@/lib/api/work-types";
 
 const upsertSchema = z.object({
   key: z
@@ -16,10 +16,7 @@ const upsertSchema = z.object({
 });
 
 export async function upsertWorkTypeAction(_prev: { error?: string; ok?: boolean } | null, formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user || !isAdminEmail(user.email)) return { error: "Forbidden" };
 
   const parsed = upsertSchema.safeParse({
@@ -29,32 +26,24 @@ export async function upsertWorkTypeAction(_prev: { error?: string; ok?: boolean
   if (!parsed.success) return { error: "Invalid payload" };
 
   try {
-    const admin = createAdminClient();
-    const { error } = await admin.from("work_types").upsert(parsed.data, { onConflict: "key" });
-    if (error) throw error;
+    await workTypeService.upsert(parsed.data.key, parsed.data.label);
     return { ok: true as const };
   } catch (e) {
-    return { error: supabaseErrorMessage(e) };
+    return { error: dbErrorMessage(e) };
   }
 }
 
 export async function deleteWorkTypeAction(key: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user || !isAdminEmail(user.email)) return { error: "Forbidden" };
 
   const k = String(key ?? "").trim();
   if (!k) return { error: "Invalid key" };
 
   try {
-    const admin = createAdminClient();
-    const { error } = await admin.from("work_types").delete().eq("key", k);
-    if (error) throw error;
+    await workTypeService.remove(k);
     return { ok: true as const };
   } catch (e) {
-    return { error: supabaseErrorMessage(e) };
+    return { error: dbErrorMessage(e) };
   }
 }
-
